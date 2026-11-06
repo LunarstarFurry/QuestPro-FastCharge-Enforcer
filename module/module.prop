@@ -1,0 +1,6 @@
+id=qpro_fastcharge
+name=Quest Pro Fast Charge Enforcer
+version=v1.1.0
+versionCode=2
+author=Lunarstar & Antigravity
+description=[Mode: FORCE 9V] Auto-locks 9V rail to minimize cable amps and heat. Press Action button to toggle PPS.
