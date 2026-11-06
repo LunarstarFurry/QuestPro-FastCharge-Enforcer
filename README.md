@@ -121,3 +121,5 @@ cable amperage and minimal cable heat.
   ```powershell
   adb shell su -c "rm -rf /data/adb/modules/qpro_fastcharge; chmod 644 /sys/class/power_supply/bms/charge_profile"
   ```
+
+## Thx Gemini! < 3
