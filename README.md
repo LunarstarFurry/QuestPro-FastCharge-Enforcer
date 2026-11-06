@@ -1,125 +1,68 @@
-# Quest Pro Fast Charge Enforcer (`qpro_fastcharge`)
+# Quest Pro Fast Charge Enforcer
 
-A lightweight Magisk module for the **Meta Quest Pro (`seacliff`)** that prevents preemptive charging throttling while the headset is worn, maintains unthrottled fast charging, and provides an automatic **9V Rail Auto-Lock** with an interactive **Magisk Action Button** toggle.
+A Magisk module for the Meta Quest Pro (`seacliff`) that stops the headset from throttling charging speeds while worn on your head, and forces chargers onto the 9V profile to keep cable and port temperatures down.
 
----
+## Why this exists
 
-## ⚡ The Problem
+Whenever you put the Quest Pro on, Meta's firmware detects the proximity sensor (`sys.hmt.mounted = 1`) and writes `1` to `/sys/class/power_supply/bms/charge_profile`:
 
-1. **Preemptive Worn-State Throttling:**  
-   In stock firmware, whenever you wear the headset (proximity sensor `sys.hmt.mounted = 1`), `/vendor/etc/init/hw/init.kona.rc` reacts by executing:
-   ```rc
-   on property:sys.hmt.mounted=1
-       write /sys/class/power_supply/bms/charge_profile 1
-   ```
-   Setting `charge_profile` to `1` instructs the Qualcomm PMIC (`PM8150B / SMB5`) to throttle down charging to ~5V so the headset's cooling fans stay quiet near your face.
-
-2. **The "High Amperage Cable Burn" Issue:**  
-   If you use a long (3m–5m) link cable or a power bank with cable resistance ($R \approx 0.3\,\Omega - 0.5\,\Omega$):
-   - Pulling ~15W at **5V** forces **3.0A – 3.65A** through the wire!
-   - By Joule's law ($P_{\text{loss}} = I^2 \times R$), high amperage causes severe voltage drop (sagging to ~4.5V) and dissipates **~3 to 5 Watts of pure heat** directly into your cable and USB-C port pins!
-
----
-
-## 🚀 The Solution
-
-1. **In-Memory Charge Profile Lock:**  
-   The module writes `0` to `/sys/class/power_supply/bms/charge_profile` and sets permissions to `0444` (read-only in RAM). Android `init` is blocked with `open() failed: Permission denied`, keeping fast charging permanently active without touching the proximity sensor or affecting the VR display (zero grey screen issues).
-
-2. **Two Operating Modes (Toggled via Magisk Action Button):**
-
-   | Mode | Behavior | Best For |
-   | :--- | :--- | :--- |
-   | **`FORCE 9V (LOCKED)`** *(Default)* | Background daemon detects USB-PD hotplug/replug and commands the kernel PHY (`select_pdo`) to lock onto the **9V fixed rail (PDO 2)**. Voltage jumps to ~8.9V and cable current drops to **~1.8A**, reducing cable heat by **over 70%**! | Long link cables, power banks, preventing port and cable heat. |
-   | **`PPS DYNAMIC`** | Disables the 9V lock and allows standard USB-PD PPS dynamic voltage modulation (5V–11V) with the battery. | Users who prefer lower internal motherboard conversion heat on short/thick cables. |
-
-3. **Live Magisk Action Button Integration:**  
-   Tapping the **Action** button on the module card in Magisk Manager toggles between **FORCE 9V** and **PPS DYNAMIC**, updates the card description in real-time, and prints live telemetry (USB Voltage, Cable Amps, Battery Temp, Profile).
-
----
-
-## 🛡️ Absolute Safety & Reversibility
-
-- **NEVER touches `/persist`**, `/boot`, `/vendor`, or flash partitions.
-- Operates 100% in volatile memory (RAM) and user space (`/data/adb/modules/qpro_fastcharge/`).
-- Disabling the module or uninstalling it immediately restores 100% stock firmware behavior on reboot.
-
----
-
-## 📦 Project Structure
-
-```
-QProFastCharge/
-├── module/
-│   ├── META-INF/com/google/android/
-│   │   ├── update-binary          # Standard Magisk installer binary
-│   │   └── updater-script         # Magisk dummy script
-│   ├── action.sh                  # Interactive Magisk Action button toggle & status
-│   ├── customize.sh               # Module installer hook
-│   ├── module.prop                # Module ID, name, version, and dynamic description
-│   ├── service.sh                 # Background late_start daemon (charge profile & 9V lock)
-│   └── uninstall.sh               # Clean uninstallation hook (restores sysfs 0644)
-├── package.py                     # Python packaging script (builds flashable zip)
-├── QProFastCharge-Magisk.zip       # Pre-built flashable Magisk module zip
-├── .gitignore
-└── README.md
+```rc
+on property:sys.hmt.mounted=1
+    write /sys/class/power_supply/bms/charge_profile 1
 ```
 
----
+Setting `charge_profile` to `1` instructs the Qualcomm PM8150B PMIC to drop charging voltage down to 5V. Meta did this purely to keep the cooling fans quiet while the headset is on your face.
 
-## 🛠️ Installation
+However, if you are playing PCVR or standalone over a long Link cable or a power bank:
+- Drawing 15W+ at 5V forces **3.0A to 3.6A** across the wire.
+- High cable resistance causes severe voltage sag (dropping below 4.5V) and dumps **3W+ of pure heat** directly into your cable and USB-C port connector.
 
-### Method 1: Via Magisk App (On Headset)
-1. Copy [`QProFastCharge-Magisk.zip`](./QProFastCharge-Magisk.zip) to your headset storage (e.g. `/sdcard/Download/`).
-2. Open **Magisk Manager** (or Singularity app).
-3. Navigate to **Modules** &rarr; **Install from storage** &rarr; select `QProFastCharge-Magisk.zip`.
-4. Reboot the headset.
+## How it works
 
-### Method 2: Via ADB (One-Liner)
-```powershell
+1. **Locks the charge profile in memory:**  
+   The module sets `/sys/class/power_supply/bms/charge_profile` to `0` and makes the node read-only (`chmod 0444`) in RAM. Android's `init` tries to write `1` when you put the headset on, fails with permission denied, and gives up. Fast charging stays active permanently.  
+   *(We do not touch `sys.hmt.mounted`, so proximity sensing, displays, and tracking still sleep and wake naturally with no grey screen glitches).*
+
+2. **Auto-latches to 9V:**  
+   When a USB-PD charger or power bank is plugged in, the background daemon checks the charger's advertised PDOs. If it finds 9V (PDO 2), it requests it from the kernel PHY (`/sys/class/usbpd/usbpd0/select_pdo`). This cuts cable current from ~3.5A down to ~1.8A, dropping cable and port heat by more than 70%.
+
+3. **Magisk Action Button Toggle:**  
+   Supports two modes you can switch between by pressing the **Action** button on the module in the Magisk app:
+   - **FORCE 9V (Default):** Locks 9V fixed rail on plug/replug. Ideal for long Link cables and power banks to minimize cable heat.
+   - **PPS DYNAMIC:** Disables the 9V lock and lets chargers with USB-PD PPS scale voltage dynamically (5V-11V) with the battery.
+
+## Safety
+
+- **Never touches `/persist`**, `/boot`, or any flash partition.
+- Everything runs purely in memory (RAM) and user space (`/data/adb/modules/qpro_fastcharge/`).
+- Disabling or removing the module and rebooting instantly restores 100% stock behavior.
+
+## Installation
+
+### Magisk App
+1. Download `QProFastCharge-Magisk.zip`.
+2. Open Magisk Manager -> Modules -> Install from storage -> pick the zip.
+3. Reboot.
+
+### ADB
+```bash
 adb push QProFastCharge-Magisk.zip /data/local/tmp/
 adb shell su -c "magisk --install-module /data/local/tmp/QProFastCharge-Magisk.zip"
 ```
 
----
+## Toggling Modes
 
-## 🎮 How to Toggle Modes
-
-### Via Magisk App UI:
-Open Magisk Manager &rarr; Modules &rarr; tap the **Action** button on **Quest Pro Fast Charge Enforcer**.
-
-### Via ADB:
-```powershell
-adb shell su -c "sh /data/adb/modules/qpro_fastcharge/action.sh"
-```
-
-Output:
-```text
-=========================================
-   Quest Pro Fast Charge Manager
-=========================================
-MODE SWITCH: [ FORCE 9V (LOCKED) ]
-Enforcing 9V fixed rail for lowest
-cable amperage and minimal cable heat.
--> Latch triggered: Selected 9V (PDO 2)!
------------------------------------------
- Live Telemetry:
- USB Voltage  : 8.93 V
- Cable Current: 1.82 A
- Battery Temp : 27.5 °C
- Headset Worn : YES
- BMS Profile  : 0 (0=Fast)
-=========================================
-```
-
----
-
-## 🗑️ How to Uninstall / Revert
-
-- **Via Magisk App:** Toggle module OFF or tap **Remove**, then reboot.
+- **In Magisk Manager:** Go to Modules, find **Quest Pro Fast Charge Enforcer**, and tap the **Action** button. It will flip modes and print live voltage, current, and battery stats.
 - **Via ADB:**
-  ```powershell
-  adb shell su -c "rm -rf /data/adb/modules/qpro_fastcharge; chmod 644 /sys/class/power_supply/bms/charge_profile"
+  ```bash
+  adb shell su -c "sh /data/adb/modules/qpro_fastcharge/action.sh"
   ```
 
-## Thx Gemini! < 3
+## Uninstalling
+
+Disable or remove it in the Magisk app, or run:
+```bash
+adb shell su -c "rm -rf /data/adb/modules/qpro_fastcharge; chmod 644 /sys/class/power_supply/bms/charge_profile"
+```
+
+## Thx Gemini! <3
