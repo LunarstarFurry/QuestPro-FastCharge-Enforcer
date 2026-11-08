@@ -25,14 +25,14 @@ if [ "$MODE" = "FORCE_9V" ]; then
     echo "scale voltage (5V-11V) with battery."
     echo "MODE=PPS" > "$CONF"
     resetprop -n persist.vendor.pps.disallowed 0
-    sed -i 's/^description=.*/description=[Mode: PPS DYNAMIC] Dynamic voltage scaling enabled. Float bypass active at 80%, Soft Green LED at 75%+./' "$PROP" 2>/dev/null
+    sed -i 's/^description=.*/description=[Mode: PPS DYNAMIC] Dynamic voltage scaling enabled. Float bypass active at 80%, Dim Green LED at 75%+./' "$PROP" 2>/dev/null
 else
     echo "MODE: [ FORCE 9V (LOCKED) ]"
     echo "Enforcing 9V fixed rail for lowest"
     echo "cable amperage and minimal cable heat."
     echo "MODE=FORCE_9V" > "$CONF"
     resetprop -n persist.vendor.pps.disallowed 1
-    sed -i 's/^description=.*/description=[Mode: FORCE 9V] Auto-locks 9V rail to minimize cable heat. Float bypass active at 80%, Soft Green LED at 75%+./' "$PROP" 2>/dev/null
+    sed -i 's/^description=.*/description=[Mode: FORCE 9V] Auto-locks 9V rail to minimize cable heat. Float bypass active at 80%, Dim Green LED at 75%+./' "$PROP" 2>/dev/null
 
     if [ "$(cat "$PD_DIR/contract" 2>/dev/null)" = "explicit" ]; then
         src_id=$(cat "$PD_DIR/src_cap_id" 2>/dev/null)
@@ -80,7 +80,7 @@ else
     echo " Bypass State : FULL FAST CHARGE"
 fi
 if [ "$is_charging" = "1" ] && [ "$cap" -ge 75 ]; then
-    echo " Power LED    : SOFT GREEN (Target Reached >= 75%)"
+    echo " Power LED    : DIM GREEN (Target Reached >= 75%)"
 elif [ "$is_charging" = "1" ]; then
     echo " Power LED    : ORANGE (Charging < 75%)"
 else

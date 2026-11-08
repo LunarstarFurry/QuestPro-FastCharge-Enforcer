@@ -15,8 +15,8 @@ LED_RED="/sys/class/leds/red/brightness"
 LED_GREEN="/sys/class/leds/green/brightness"
 LED_BLUE="/sys/class/leds/blue/brightness"
 
-# Soft ambient green brightness (gentle on the eyes, not blinding at night)
-GREEN_BRIGHTNESS=64
+# Dim ambient green brightness (sweet spot for nightstand/dark room)
+GREEN_BRIGHTNESS=15
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG"
@@ -30,7 +30,7 @@ done
 # Wait for hardware daemons to stabilize
 sleep 5
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.0 started" > "$LOG"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.1 started" > "$LOG"
 
 # Helper to find which PDO is 9000 mV (9V)
 get_9v_pdo() {
@@ -64,6 +64,7 @@ get_active_pdo() {
 }
 
 STATE="FAST_CHARGE"
+LED_OVERRIDDEN=0
 
 # Daemon loop
 while true; do
@@ -154,18 +155,29 @@ while true; do
             fi
         fi
 
-        # 5. Charging Indicator Management (Soft Green LED at 75%+)
+        # 5. Charging Indicator Management (Soft Dim Green LED at 75%+)
         is_charging=0
         [ "$(cat "$USB_ONLINE" 2>/dev/null)" = "1" ] && is_charging=1
         [ "$(cat "$DC_PRESENT" 2>/dev/null)" = "1" ] && is_charging=1
 
         if [ "$is_charging" = "1" ]; then
             if [ "$cap" -ge 75 ]; then
-                # Show soft ambient Green LED when charging and >= 75%
+                # Show soft dim Green LED when charging and >= 75%
                 echo 0 > "$LED_RED" 2>/dev/null
                 echo "$GREEN_BRIGHTNESS" > "$LED_GREEN" 2>/dev/null
                 echo 0 > "$LED_BLUE" 2>/dev/null
+                LED_OVERRIDDEN=1
+            elif [ "$LED_OVERRIDDEN" = "1" ]; then
+                # Battery dropped below 75% while charging; clear green override
+                echo 0 > "$LED_GREEN" 2>/dev/null
+                LED_OVERRIDDEN=0
             fi
+        elif [ "$LED_OVERRIDDEN" = "1" ]; then
+            # Headset unplugged / removed from dock; extinguish override cleanly
+            echo 0 > "$LED_RED" 2>/dev/null
+            echo 0 > "$LED_GREEN" 2>/dev/null
+            echo 0 > "$LED_BLUE" 2>/dev/null
+            LED_OVERRIDDEN=0
         fi
     fi
 

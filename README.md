@@ -31,6 +31,12 @@ However, if you are playing PCVR or standalone over a long Link cable or a power
    - **FORCE 9V (Default):** Locks 9V fixed rail on plug/replug. Ideal for long Link cables and power banks to minimize cable heat.
    - **PPS DYNAMIC:** Disables the 9V lock and lets chargers with USB-PD PPS scale voltage dynamically (5V-11V) with the battery.
 
+4. **Dual-Charger 80% Float Bypass (Zero Drift & Power Bank Safe):**  
+   When the battery hits the charge target (~80%), the daemon shuts off the auxiliary booster (`parallel_disable = 1`) and dials the main PMIC down to a gentle 100 mA float (`force_main_fcc = 100000`). This holds the battery flat at ~80% without creeping to 100% overnight on the dock, while keeping external USB draw active so smart power banks never sleep or turn off.
+
+5. **Night-Friendly Dim Green LED:**  
+   When charging and at 75% or higher, the side power LED switches to a gentle, dim ambient green (PWM 15) so you can tell at a glance across the room that it's ready without blinding you in the dark. It turns off cleanly the moment you unplug or lift it off the dock.
+
 ## Safety
 
 - **Never touches `/persist`**, `/boot`, or any flash partition.
