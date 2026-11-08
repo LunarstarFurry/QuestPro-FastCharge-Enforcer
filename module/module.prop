@@ -1,6 +1,6 @@
 id=qpro_fastcharge
 name=Quest Pro Fast Charge Enforcer
-version=v1.1.0
-versionCode=2
+version=v1.2.0
+versionCode=3
 author=Lunarstar
-description=[Mode: FORCE 9V] Keeps 9V charging active while worn to minimize cable heat. Tap Action button for PPS.
+description=[Mode: FORCE 9V] Keeps 9V/PPS charging active while worn. Dual-charger float bypass keeps power banks alive at 80%.
