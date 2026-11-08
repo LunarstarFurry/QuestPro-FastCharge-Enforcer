@@ -8,7 +8,15 @@ FCC_NODE="/sys/class/power_supply/main/force_main_fcc"
 PARALLEL_NODE="/sys/class/power_supply/battery/parallel_disable"
 SUSPEND_NODE="/sys/class/power_supply/battery/input_suspend"
 CAP_NODE="/sys/class/power_supply/battery/capacity"
+USB_ONLINE="/sys/class/power_supply/usb/online"
+DC_PRESENT="/sys/class/power_supply/dc/present"
 SING_PREFS="/data/user/0/com.lumi.singularity/shared_prefs/singularity_prefs.xml"
+LED_RED="/sys/class/leds/red/brightness"
+LED_GREEN="/sys/class/leds/green/brightness"
+LED_BLUE="/sys/class/leds/blue/brightness"
+
+# Soft ambient green brightness (gentle on the eyes, not blinding at night)
+GREEN_BRIGHTNESS=64
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG"
@@ -22,7 +30,7 @@ done
 # Wait for hardware daemons to stabilize
 sleep 5
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.2.0 started" > "$LOG"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.0 started" > "$LOG"
 
 # Helper to find which PDO is 9000 mV (9V)
 get_9v_pdo() {
@@ -118,7 +126,7 @@ while true; do
         fi
     fi
 
-    # 4. Smart Float Bypass Management
+    # 4. Smart Float Bypass Management (Tight ~80% Lock)
     # Dynamically read Singularity limit target if set, otherwise default to 80
     TARGET=$(grep -o 'charge_limit_target" value="[0-9]*"' "$SING_PREFS" 2>/dev/null | grep -o '[0-9]*')
     [ -z "$TARGET" ] && TARGET=80
@@ -129,12 +137,12 @@ while true; do
         if [ "$cap" -ge "$TARGET" ]; then
             if [ "$STATE" != "FLOAT_BYPASS" ]; then
                 # Engage dual-charger float bypass:
-                # Disable auxiliary booster (SMB1355) and set primary PMIC (PM8150B) to 300mA float
+                # Aux booster off, primary PMIC clamped to 100mA float (equal to sleep draw -> zero drift)
                 echo 1 > "$PARALLEL_NODE" 2>/dev/null
-                echo 300000 > "$FCC_NODE" 2>/dev/null
+                echo 100000 > "$FCC_NODE" 2>/dev/null
                 echo 0 > "$SUSPEND_NODE" 2>/dev/null
                 STATE="FLOAT_BYPASS"
-                log_msg "Target reached ($cap% >= $TARGET%): Engaged Dual-Charger Float Bypass (Aux off, 300mA float, power bank awake)"
+                log_msg "Target reached ($cap% >= $TARGET%): Engaged 80% Float Bypass (Aux off, 100mA float lock)"
             fi
         elif [ "$cap" -le "$LOW" ]; then
             if [ "$STATE" != "FAST_CHARGE" ]; then
@@ -143,6 +151,20 @@ while true; do
                 echo 4800000 > "$FCC_NODE" 2>/dev/null
                 STATE="FAST_CHARGE"
                 log_msg "Hysteresis threshold reached ($cap% <= $LOW%): Restored Full Fast Charging (Aux on, 4.8A max)"
+            fi
+        fi
+
+        # 5. Charging Indicator Management (Soft Green LED at 75%+)
+        is_charging=0
+        [ "$(cat "$USB_ONLINE" 2>/dev/null)" = "1" ] && is_charging=1
+        [ "$(cat "$DC_PRESENT" 2>/dev/null)" = "1" ] && is_charging=1
+
+        if [ "$is_charging" = "1" ]; then
+            if [ "$cap" -ge 75 ]; then
+                # Show soft ambient Green LED when charging and >= 75%
+                echo 0 > "$LED_RED" 2>/dev/null
+                echo "$GREEN_BRIGHTNESS" > "$LED_GREEN" 2>/dev/null
+                echo 0 > "$LED_BLUE" 2>/dev/null
             fi
         fi
     fi
