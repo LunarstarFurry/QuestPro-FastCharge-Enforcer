@@ -60,18 +60,40 @@ echo "-----------------------------------------"
 echo " Live Telemetry:"
 v=$(cat /sys/class/power_supply/usb/voltage_now 2>/dev/null)
 i=$(cat /sys/class/power_supply/usb/input_current_now 2>/dev/null)
+bv=$(cat /sys/class/power_supply/battery/voltage_now 2>/dev/null)
+bi=$(cat /sys/class/power_supply/battery/current_now 2>/dev/null)
 t=$(cat /sys/class/power_supply/battery/temp 2>/dev/null)
 cap=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null)
 fcc=$(cat "$FCC_NODE" 2>/dev/null)
 p_dis=$(cat "$PARALLEL_NODE" 2>/dev/null)
 hmt=$(getprop sys.hmt.mounted)
+dc_pres=$(cat /sys/class/power_supply/dc/present 2>/dev/null)
+usb_on=$(cat /sys/class/power_supply/usb/online 2>/dev/null)
+
 is_charging=0
-[ "$(cat /sys/class/power_supply/usb/online 2>/dev/null)" = "1" ] && is_charging=1
-[ "$(cat /sys/class/power_supply/dc/present 2>/dev/null)" = "1" ] && is_charging=1
+[ "$usb_on" = "1" ] && is_charging=1
+[ "$dc_pres" = "1" ] && is_charging=1
+
+# Battery power in mW
+bat_mw=0
+if [ -n "$bv" ] && [ -n "$bi" ]; then
+    bat_mw=$(( (bv / 1000) * (bi / 1000) / 1000 ))
+fi
 
 echo " Battery Level: ${cap}%"
-echo " USB Voltage  : $((v/1000000)).$(((v/10000)%100)) V"
-echo " Cable Current: $((i/1000000)).$(((i/10000)%100)) A"
+if [ "$dc_pres" = "1" ]; then
+    echo " Power Source : CHARGING DOCK (Pogo Pins)"
+    echo " Battery Rate : $((bat_mw/1000)).$(((bat_mw%1000)/100)) W (+$((bi/1000)) mA)"
+elif [ "$usb_on" = "1" ]; then
+    echo " Power Source : USB-C CABLE"
+    echo " USB Voltage  : $((v/1000000)).$(((v/10000)%100)) V"
+    echo " Cable Current: $((i/1000000)).$(((i/10000)%100)) A"
+    echo " Battery Rate : $((bat_mw/1000)).$(((bat_mw%1000)/100)) W (+$((bi/1000)) mA)"
+else
+    echo " Power Source : ON BATTERY (Discharging)"
+    dis_mw=$(( -bat_mw ))
+    echo " Battery Drain: $((dis_mw/1000)).$(((dis_mw%1000)/100)) W ($((bi/1000)) mA)"
+fi
 echo " Battery Temp : $((t/10)).$((t%10)) °C"
 echo " Headset Worn : $( [ "$hmt" = "1" ] && echo "YES" || echo "NO" )"
 if [ "$fcc" = "100000" ] && [ "$p_dis" = "1" ]; then

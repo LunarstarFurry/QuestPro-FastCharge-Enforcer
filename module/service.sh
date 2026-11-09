@@ -63,7 +63,7 @@ get_active_pdo() {
     echo "$active"
 }
 
-STATE="FAST_CHARGE"
+STATE=""
 LED_OVERRIDDEN=0
 
 # Daemon loop
@@ -145,13 +145,16 @@ while true; do
                 STATE="FLOAT_BYPASS"
                 log_msg "Target reached ($cap% >= $TARGET%): Engaged 80% Float Bypass (Aux off, 100mA float lock)"
             fi
-        elif [ "$cap" -le "$LOW" ]; then
+        elif [ "$STATE" = "FLOAT_BYPASS" ] && [ "$cap" -gt "$LOW" ]; then
+            # Stay in float bypass until discharge falls below hysteresis threshold
+            :
+        else
             if [ "$STATE" != "FAST_CHARGE" ]; then
                 # Re-engage full fast charging
                 echo 0 > "$PARALLEL_NODE" 2>/dev/null
                 echo 4800000 > "$FCC_NODE" 2>/dev/null
                 STATE="FAST_CHARGE"
-                log_msg "Hysteresis threshold reached ($cap% <= $LOW%): Restored Full Fast Charging (Aux on, 4.8A max)"
+                log_msg "Fast charge active ($cap% < $TARGET%): Restored Full Fast Charging (Aux on, 4.8A max)"
             fi
         fi
 
