@@ -64,6 +64,7 @@ get_active_pdo() {
 }
 
 STATE=""
+CURRENT_FLOAT_FCC=0
 LED_OVERRIDDEN=0
 
 # Daemon loop
@@ -136,14 +137,21 @@ while true; do
     cap=$(cat "$CAP_NODE" 2>/dev/null)
     if [ -n "$cap" ]; then
         if [ "$cap" -ge "$TARGET" ]; then
-            if [ "$STATE" != "FLOAT_BYPASS" ]; then
+            # Optimal float clamp:
+            # On dock (deep sleep ~40mA): 50mA clamp balances sleep draw perfectly (net +-2mA, ~0% drift)
+            # On USB (power banks): 100mA clamp ensures power bank stays awake
+            FLOAT_FCC=100000
+            [ "$(cat "$DC_PRESENT" 2>/dev/null)" = "1" ] && FLOAT_FCC=50000
+
+            if [ "$STATE" != "FLOAT_BYPASS" ] || [ "$CURRENT_FLOAT_FCC" != "$FLOAT_FCC" ]; then
                 # Engage dual-charger float bypass:
-                # Aux booster off, primary PMIC clamped to 100mA float (equal to sleep draw -> zero drift)
+                # Aux booster off, primary PMIC clamped to float current
                 echo 1 > "$PARALLEL_NODE" 2>/dev/null
-                echo 100000 > "$FCC_NODE" 2>/dev/null
+                echo "$FLOAT_FCC" > "$FCC_NODE" 2>/dev/null
                 echo 0 > "$SUSPEND_NODE" 2>/dev/null
                 STATE="FLOAT_BYPASS"
-                log_msg "Target reached ($cap% >= $TARGET%): Engaged 80% Float Bypass (Aux off, 100mA float lock)"
+                CURRENT_FLOAT_FCC="$FLOAT_FCC"
+                log_msg "Target reached ($cap% >= $TARGET%): Engaged Float Bypass (Aux off, $((FLOAT_FCC/1000))mA float lock)"
             fi
         elif [ "$STATE" = "FLOAT_BYPASS" ] && [ "$cap" -gt "$LOW" ]; then
             # Stay in float bypass until discharge falls below hysteresis threshold
@@ -154,6 +162,7 @@ while true; do
                 echo 0 > "$PARALLEL_NODE" 2>/dev/null
                 echo 4800000 > "$FCC_NODE" 2>/dev/null
                 STATE="FAST_CHARGE"
+                CURRENT_FLOAT_FCC=0
                 log_msg "Fast charge active ($cap% < $TARGET%): Restored Full Fast Charging (Aux on, 4.8A max)"
             fi
         fi

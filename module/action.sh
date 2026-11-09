@@ -96,8 +96,8 @@ else
 fi
 echo " Battery Temp : $((t/10)).$((t%10)) °C"
 echo " Headset Worn : $( [ "$hmt" = "1" ] && echo "YES" || echo "NO" )"
-if [ "$fcc" = "100000" ] && [ "$p_dis" = "1" ]; then
-    echo " Bypass State : 80% FLOAT BYPASS (Locked)"
+if [ "$p_dis" = "1" ] && [ "$fcc" -le 100000 ]; then
+    echo " Bypass State : 80% FLOAT BYPASS (Locked: $((fcc/1000))mA)"
 else
     echo " Bypass State : FULL FAST CHARGE"
 fi
