@@ -18,6 +18,9 @@ LED_BLUE="/sys/class/leds/blue/brightness"
 # Dim ambient green brightness (sweet spot for nightstand/dark room)
 GREEN_BRIGHTNESS=15
 
+# Thermal-safe fast charge current limit (3.0A prevents JEITA 45°C thermal tripping & pulsing LED)
+FAST_FCC=3000000
+
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG"
 }
@@ -30,7 +33,7 @@ done
 # Wait for hardware daemons to stabilize
 sleep 5
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.1 started" > "$LOG"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.2 started" > "$LOG"
 
 # Helper to find which PDO is 9000 mV (9V)
 get_9v_pdo() {
@@ -157,13 +160,13 @@ while true; do
             # Stay in float bypass until discharge falls below hysteresis threshold
             :
         else
-            if [ "$STATE" != "FAST_CHARGE" ]; then
-                # Re-engage full fast charging
+            if [ "$STATE" != "FAST_CHARGE" ] || [ "$(cat "$FCC_NODE" 2>/dev/null)" != "$FAST_FCC" ]; then
+                # Re-engage fast charging (thermal-safe 3.0A limit)
                 echo 0 > "$PARALLEL_NODE" 2>/dev/null
-                echo 4800000 > "$FCC_NODE" 2>/dev/null
+                echo "$FAST_FCC" > "$FCC_NODE" 2>/dev/null
                 STATE="FAST_CHARGE"
                 CURRENT_FLOAT_FCC=0
-                log_msg "Fast charge active ($cap% < $TARGET%): Restored Full Fast Charging (Aux on, 4.8A max)"
+                log_msg "Fast charge active ($cap% < $TARGET%): Restored Fast Charging (Aux on, $((FAST_FCC/1000000)).$(((FAST_FCC%1000000)/100000))A thermal-safe limit)"
             fi
         fi
 

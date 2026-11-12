@@ -26,15 +26,20 @@ However, if you are playing PCVR or standalone over a long Link cable or a power
 2. **Auto-latches to 9V:**  
    When a USB-PD charger or power bank is plugged in, the background daemon checks the charger's advertised PDOs. If it finds 9V (PDO 2), it requests it from the kernel PHY (`/sys/class/usbpd/usbpd0/select_pdo`). This cuts cable current from ~3.5A down to ~1.8A, dropping cable and port heat by more than 70%.
 
-3. **Magisk Action Button Toggle:**  
+3. **Thermal-Safe 3.0A Fast Charging:**  
+   Instead of uncapped 4.8A peaks that quickly overheat the uncooled rear battery pack to 45°C (causing Qualcomm JEITA thermal cutoffs and pulsing orange LEDs), the daemon caps fast charging current to a stable **3.0A (~12W)**. This allows continuous, unbroken fast charging that stays comfortably under 40°C and actually reaches 80% faster overall.
+
+4. **Adaptive Dual-Charger 80% Float Bypass (Zero Drift & Power Bank Safe):**  
+   When the battery hits the charge target (~80%), the daemon shuts off the auxiliary booster (`parallel_disable = 1`) and locks the primary PMIC into an adaptive float clamp:
+   - **On Dock (Pogo Pins):** Clamped to **50 mA** (`force_main_fcc = 50000`), balancing deep-sleep idle draw almost perfectly with virtually zero overnight drift.
+   - **On USB (Power Banks):** Clamped to **100 mA** (`force_main_fcc = 100000`), keeping smart power banks awake without port shutoffs.
+
+5. **Magisk Action Button Toggle:**  
    Supports two modes you can switch between by pressing the **Action** button on the module in the Magisk app:
    - **FORCE 9V (Default):** Locks 9V fixed rail on plug/replug. Ideal for long Link cables and power banks to minimize cable heat.
    - **PPS DYNAMIC:** Disables the 9V lock and lets chargers with USB-PD PPS scale voltage dynamically (5V-11V) with the battery.
 
-4. **Dual-Charger 80% Float Bypass (Zero Drift & Power Bank Safe):**  
-   When the battery hits the charge target (~80%), the daemon shuts off the auxiliary booster (`parallel_disable = 1`) and dials the main PMIC down to a gentle 100 mA float (`force_main_fcc = 100000`). This holds the battery flat at ~80% without creeping to 100% overnight on the dock, while keeping external USB draw active so smart power banks never sleep or turn off.
-
-5. **Night-Friendly Dim Green LED:**  
+6. **Night-Friendly Dim Green LED:**  
    When charging and at 75% or higher, the side power LED switches to a gentle, dim ambient green (PWM 15) so you can tell at a glance across the room that it's ready without blinding you in the dark. It turns off cleanly the moment you unplug or lift it off the dock.
 
 ## Safety

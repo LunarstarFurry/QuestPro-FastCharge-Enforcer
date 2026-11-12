@@ -99,7 +99,7 @@ echo " Headset Worn : $( [ "$hmt" = "1" ] && echo "YES" || echo "NO" )"
 if [ "$p_dis" = "1" ] && [ "$fcc" -le 100000 ]; then
     echo " Bypass State : 80% FLOAT BYPASS (Locked: $((fcc/1000))mA)"
 else
-    echo " Bypass State : FULL FAST CHARGE"
+    echo " Bypass State : FAST CHARGE (Thermal Cap: $((fcc/1000))mA)"
 fi
 if [ "$is_charging" = "1" ] && [ "$cap" -ge 75 ]; then
     echo " Power LED    : DIM GREEN (Target Reached >= 75%)"
