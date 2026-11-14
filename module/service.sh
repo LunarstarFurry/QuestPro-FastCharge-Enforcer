@@ -123,7 +123,8 @@ while true; do
         fi
     fi
 
-    # 3. Always protect against input_suspend killing the power bank
+    # 3. Always protect against input_suspend killing the power bank or dock
+    pkill -f "charge_limit.sh" 2>/dev/null
     if [ -e "$SUSPEND_NODE" ]; then
         if [ "$(cat "$SUSPEND_NODE" 2>/dev/null)" = "1" ]; then
             echo 0 > "$SUSPEND_NODE" 2>/dev/null
