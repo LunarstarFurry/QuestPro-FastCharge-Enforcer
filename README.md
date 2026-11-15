@@ -30,16 +30,22 @@ However, if you are playing PCVR or standalone over a long Link cable or a power
    Instead of uncapped 4.8A peaks that quickly overheat the uncooled rear battery pack to 45°C (causing Qualcomm JEITA thermal cutoffs and pulsing orange LEDs), the daemon caps fast charging current to a stable **3.0A (~12W)**. This allows continuous, unbroken fast charging that stays comfortably under 40°C and actually reaches 80% faster overall.
 
 4. **Adaptive Dual-Charger 80% Float Bypass (Zero Drift & Power Bank Safe):**  
-   When the battery hits the charge target (~80%), the daemon shuts off the auxiliary booster (`parallel_disable = 1`) and locks the primary PMIC into an adaptive float clamp:
-   - **On Dock (Pogo Pins):** Clamped to **50 mA** (`force_main_fcc = 50000`), balancing deep-sleep idle draw almost perfectly with virtually zero overnight drift.
-   - **On USB (Power Banks):** Clamped to **100 mA** (`force_main_fcc = 100000`), keeping smart power banks awake without port shutoffs.
+   The Quest Pro features a dual-charger architecture consisting of a primary **Qualcomm PM8150B** PMIC and a secondary **Qualcomm SMB1355** parallel booster.
+   - **During Fast Charging (< 80%):** Both chargers run in tandem (`parallel_disable = 0`), splitting the current to minimize heat dissipation on each chip.
+   - **At Target SOC (80%):** The daemon powers down the secondary SMB1355 booster completely (`parallel_disable = 1`) and locks the primary PM8150B into an adaptive float clamp:
+     - **On Dock (Pogo Pins):** Clamped to **50 mA** (`force_main_fcc = 50000`), balancing deep-sleep idle draw almost perfectly with virtually zero overnight drift (< 0.3% over 10 hours).
+     - **On USB (Power Banks):** Clamped to **100 mA** (`force_main_fcc = 100000`), keeping smart power banks awake without port shutoffs.
+   - **Auto-Conflict Suppression:** Automatically suppresses competing userspace scripts (such as Singularity's legacy `charge_limit.sh`) in memory so they never fight the hardware float clamp or cause the power LED to cycle.
 
-5. **Magisk Action Button Toggle:**  
+5. **True Hardware Power Bypass (VPH_PWR):**  
+   Thanks to Qualcomm's NVDC power-path architecture, the XR2 processor, displays, and tracking cameras draw power directly from the external charger via the system rail (`VPH_PWR`). When the 80% float lock is engaged, the battery sits idle behind the BATFET switch without cycling or heating up while you game for hours.
+
+6. **Magisk Action Button Toggle:**  
    Supports two modes you can switch between by pressing the **Action** button on the module in the Magisk app:
    - **FORCE 9V (Default):** Locks 9V fixed rail on plug/replug. Ideal for long Link cables and power banks to minimize cable heat.
    - **PPS DYNAMIC:** Disables the 9V lock and lets chargers with USB-PD PPS scale voltage dynamically (5V-11V) with the battery.
 
-6. **Night-Friendly Dim Green LED:**  
+7. **Night-Friendly Dim Green LED:**  
    When charging and at 75% or higher, the side power LED switches to a gentle, dim ambient green (PWM 15) so you can tell at a glance across the room that it's ready without blinding you in the dark. It turns off cleanly the moment you unplug or lift it off the dock.
 
 ## Safety
