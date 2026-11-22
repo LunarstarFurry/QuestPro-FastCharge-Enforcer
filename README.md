@@ -1,6 +1,6 @@
 # Quest Pro Fast Charge Enforcer
 
-A Magisk module for the Meta Quest Pro (`seacliff`) that stops the headset from throttling charging speeds while worn on your head, and forces chargers onto the 9V profile to keep cable and port temperatures down. *(Tested on v2.5 and v2.6.)*
+A Magisk module for the Meta Quest Pro (`seacliff`) that stops the headset from throttling charging speeds while worn on your head, and forces chargers onto the 9V profile to keep cable and port temperatures down. *(Tested on Meta firmware v2.5 and v2.6 / 206.)*
 
 ## Why this exists
 
