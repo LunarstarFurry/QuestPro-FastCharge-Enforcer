@@ -35,7 +35,10 @@ However, if you are playing PCVR or standalone over a long Link cable or a power
    - **At Target SOC (80%):** The daemon powers down the secondary SMB1355 booster completely (`parallel_disable = 1`) and locks the primary PM8150B into an adaptive float clamp:
      - **On Dock (Pogo Pins):** Clamped to **50 mA** (`force_main_fcc = 50000`), balancing deep-sleep idle draw almost perfectly with virtually zero overnight drift (< 0.3% over 10 hours).
      - **On USB (Power Banks):** Clamped to **100 mA** (`force_main_fcc = 100000`), keeping smart power banks awake without port shutoffs.
-   - **Auto-Conflict Suppression:** Automatically suppresses competing userspace scripts (such as Singularity's legacy `charge_limit.sh`) in memory so they never fight the hardware float clamp or cause the power LED to cycle.
+   - **Singularity Integration & Auto-Conflict Suppression:**
+     - Dynamically reads your chosen `charge_limit_target` from Singularity's preferences (`singularity_prefs.xml`), defaulting to **80%** if unset.
+     - Automatically suppresses Singularity's competing `charge_limit.sh` in memory (and ensures the script stays writable so Singularity never crashes when changing settings) so it never fights the hardware float clamp or causes the power LED to cycle.
+     - **Singularity UI Quirk:** Because `charge_limit.sh` is stopped in the background, Singularity may flip its toggle back to off and display `100%` in the UI after a while. This is purely cosmetic—your saved `charge_limit_target` in `singularity_prefs.xml` is preserved and continues to be enforced by this module.
 
 5. **True Hardware Power Bypass (VPH_PWR):**  
    Thanks to Qualcomm's NVDC power-path architecture, the XR2 processor, displays, and tracking cameras draw power directly from the external charger via the system rail (`VPH_PWR`). When the 80% float lock is engaged, the battery sits idle behind the BATFET switch without cycling or heating up while you game for hours.
