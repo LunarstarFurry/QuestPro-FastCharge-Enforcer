@@ -1,6 +1,6 @@
 # Quest Pro Fast Charge Enforcer
 
-A Magisk module for the Meta Quest Pro (`seacliff`) that stops the headset from throttling charging speeds while worn on your head, and forces chargers onto the 9V profile to keep cable and port temperatures down.
+A Magisk module for the Meta Quest Pro (`seacliff`) that stops the headset from throttling charging speeds while worn on your head, and forces chargers onto the 9V profile to keep cable and port temperatures down. *(Tested on v2.5 and v2.6.)*
 
 ## Why this exists
 
@@ -35,7 +35,7 @@ However, if you are playing PCVR or standalone over a long Link cable or a power
    - **At Target SOC (80%):** The daemon powers down the secondary SMB1355 booster completely (`parallel_disable = 1`) and locks the primary PM8150B into an adaptive float clamp:
      - **On Dock (Pogo Pins):** Clamped to **50 mA** (`force_main_fcc = 50000`), balancing deep-sleep idle draw almost perfectly with virtually zero overnight drift (< 0.3% over 10 hours).
      - **On USB (Power Banks):** Clamped to **100 mA** (`force_main_fcc = 100000`), keeping smart power banks awake without port shutoffs.
-   - **Singularity Integration & Auto-Conflict Suppression (tested on Singularity v2.5 & v2.6):**
+   - **Singularity Integration & Auto-Conflict Suppression:**
      - Dynamically reads your chosen `charge_limit_target` from Singularity's preferences (`singularity_prefs.xml`), defaulting to **80%** if unset.
      - Automatically suppresses Singularity's competing `charge_limit.sh` in memory (and ensures the script stays writable so Singularity never crashes when changing settings) so it never fights the hardware float clamp or causes the power LED to cycle. (I'd still recommend disable the charging limit in singularity tbh)
      - **Singularity UI Quirk:** Because `charge_limit.sh` is stopped in the background, Singularity may flip its toggle back to off and display `100%` in the UI after a while. This is purely cosmetic—your saved `charge_limit_target` in `singularity_prefs.xml` is preserved and continues to be enforced by this module.
