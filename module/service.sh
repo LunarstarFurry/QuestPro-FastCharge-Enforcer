@@ -33,7 +33,13 @@ done
 # Wait for hardware daemons to stabilize
 sleep 5
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.2 started" > "$LOG"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Quest Pro Fast Charge Enforcer Daemon v1.3.3 started" > "$LOG"
+
+# Migration: restore write permission on Singularity's charge_limit.sh if locked read-only
+SING_SCRIPT="/data/user/0/com.lumi.singularity/files/charge_limit.sh"
+if [ -f "$SING_SCRIPT" ]; then
+    chmod u+w "$SING_SCRIPT" 2>/dev/null
+fi
 
 # Helper to find which PDO is 9000 mV (9V)
 get_9v_pdo() {

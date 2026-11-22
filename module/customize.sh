@@ -8,6 +8,12 @@ set_perm "$MODPATH/action.sh" 0 0 0755
 ui_print "- Initializing default mode: FORCE_9V"
 echo "MODE=FORCE_9V" > "$MODPATH/mode.conf"
 
+SING_SCRIPT="/data/user/0/com.lumi.singularity/files/charge_limit.sh"
+if [ -f "$SING_SCRIPT" ]; then
+    ui_print "- Restoring write access to Singularity charge_limit.sh..."
+    chmod u+w "$SING_SCRIPT" 2>/dev/null
+fi
+
 ui_print "- Applying initial fast charging profile in RAM..."
 if [ -e "/sys/class/power_supply/bms/charge_profile" ]; then
     chmod 644 /sys/class/power_supply/bms/charge_profile 2>/dev/null
