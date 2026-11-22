@@ -37,7 +37,7 @@ However, if you are playing PCVR or standalone over a long Link cable or a power
      - **On USB (Power Banks):** Clamped to **100 mA** (`force_main_fcc = 100000`), keeping smart power banks awake without port shutoffs.
    - **Singularity Integration & Auto-Conflict Suppression:**
      - Dynamically reads your chosen `charge_limit_target` from Singularity's preferences (`singularity_prefs.xml`), defaulting to **80%** if unset.
-     - Automatically suppresses Singularity's competing `charge_limit.sh` in memory (and ensures the script stays writable so Singularity never crashes when changing settings) so it never fights the hardware float clamp or causes the power LED to cycle.
+     - Automatically suppresses Singularity's competing `charge_limit.sh` in memory (and ensures the script stays writable so Singularity never crashes when changing settings) so it never fights the hardware float clamp or causes the power LED to cycle. (I'd still recommend disable the charging limit in singularity tbh)
      - **Singularity UI Quirk:** Because `charge_limit.sh` is stopped in the background, Singularity may flip its toggle back to off and display `100%` in the UI after a while. This is purely cosmetic—your saved `charge_limit_target` in `singularity_prefs.xml` is preserved and continues to be enforced by this module.
 
 5. **True Hardware Power Bypass (VPH_PWR):**  
